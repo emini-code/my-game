@@ -263,7 +263,7 @@
             </div>
 
             <div class="text-[11px] text-slate-400 leading-relaxed bg-slate-950/50 rounded-xl p-3 border border-slate-800">
-              💡 <strong>GitHub 자동 연동:</strong> GitHub Pages 저장소에 <code class="text-sky-300">index.html</code>과 같은 폴더에 퀴즈 <code class="text-sky-300">.js</code> 파일(예: <code class="text-sky-300">태양계.js</code>, <code class="text-sky-300">우주.js</code>)을 올려두면 별도 목록 파일 없이 자동으로 표시됩니다.
+              💡 <strong>GitHub 자동 연동:</strong> 저장소 루트의 <code class="text-sky-300">quiz</code> 폴더에 퀴즈 <code class="text-sky-300">.js</code> 파일(예: <code class="text-sky-300">태양계.js</code>, <code class="text-sky-300">우주.js</code>)을 올려두면 자동으로 인식됩니다.
             </div>
           </div>
 
@@ -3803,61 +3803,129 @@
         },
 
         async scanGitHubFolder() {
-          const ghInfo = this.parseGitHubPagesInfo();
-          if (!ghInfo) {
-            this.setScanStatus('로컬 환경에서는 [📂 퀴즈 .js 직접 추가]를 이용하거나 GitHub Pages에 업로드하면 자동 인식됩니다.', 'default');
-            return 0;
-          }
           if (this.isScanning) return 0;
-
           this.isScanning = true;
           this.hasScannedGitHub = true;
-          this.setScanStatus(`🔍 GitHub 저장소(${ghInfo.owner}/${ghInfo.repo})에서 .js 퀴즈 파일을 자동 검색 중...`, 'default');
 
           // 기존에 사용자가 직접 업로드한 파일은 유지
           const manualUploads = this.catalog.filter((c) => c.id.startsWith('upload_'));
+          let discovered = [];
+          let sourceLabel = 'quiz 폴더';
+          let lastHttpStatus = 0;
 
           try {
-            const apiUrl = `https://api.github.com/repos/${encodeURIComponent(ghInfo.owner)}/${encodeURIComponent(ghInfo.repo)}/contents/quiz`;
-            const res = await fetch(apiUrl, { headers: { Accept: 'application/vnd.github.v3+json' } });
-
-            // User 사이트(owner.github.io)인데 하위 폴더가 repo로 파싱된 경우 루트 quiz 폴더로 재시도
-            let filesJson = null;
-            if (res.ok) {
-              filesJson = await res.json();
-            } else if (ghInfo.repo !== `${ghInfo.owner}.github.io`) {
-              const fallbackUrl = `https://api.github.com/repos/${encodeURIComponent(ghInfo.owner)}/${encodeURIComponent(ghInfo.owner + '.github.io')}/contents/quiz`;
-              const fbRes = await fetch(fallbackUrl, { headers: { Accept: 'application/vnd.github.v3+json' } });
-              if (fbRes.ok) filesJson = await fbRes.json();
+            // 1단계: GitHub Actions가 생성한 quizzes.json 우선 탐색 (API 호출 제한 없음)
+            this.setScanStatus('🔍 quiz 폴더의 퀴즈 목록(quizzes.json)을 불러오는 중...', 'default');
+            const manifestCandidates = [
+              { manifest: `../quizzes.json?t=${Date.now()}`, basePath: '../quiz/' },
+              { manifest: `./quizzes.json?t=${Date.now()}`, basePath: './quiz/' }
+            ];
+            for (const cand of manifestCandidates) {
+              try {
+                const mRes = await fetch(cand.manifest);
+                if (mRes.ok) {
+                  const list = await mRes.json();
+                  if (Array.isArray(list) && list.length > 0) {
+                    discovered = list
+                      .filter((name) => typeof name === 'string' && /\.js$/i.test(name))
+                      .map((name, idx) => ({
+                        id: 'gh_' + idx + '_' + name,
+                        title: name.replace(/\.js$/i, ''),
+                        file: name,
+                        basePath: cand.basePath,
+                        downloadUrl: null,
+                        data: null,
+                        selected: idx === 0 && manualUploads.length === 0
+                      }));
+                    if (discovered.length > 0) {
+                      sourceLabel = 'quizzes.json';
+                      break;
+                    }
+                  }
+                }
+              } catch (e) {}
             }
 
-            if (!Array.isArray(filesJson)) {
-              throw new Error('폴더 목록을 불러오지 못했습니다.');
+            // 2단계: quizzes.json이 없을 때만 GitHub API 폴백 탐색 (대소문자 폴더명 자동 대응)
+            if (discovered.length === 0) {
+              const ghInfo = this.parseGitHubPagesInfo();
+              if (!ghInfo) {
+                this.setScanStatus('로컬 환경에서는 [📂 퀴즈 .js 직접 추가]를 이용하거나 GitHub Pages에 업로드하면 자동 인식됩니다.', 'default');
+                return 0;
+              }
+
+              this.setScanStatus(`🔍 GitHub 저장소(${ghInfo.owner}/${ghInfo.repo})의 quiz 폴더를 검색 중...`, 'default');
+
+              const fetchQuizDir = async (owner, repo) => {
+                const url = `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/contents/quiz`;
+                const res = await fetch(url, { headers: { Accept: 'application/vnd.github.v3+json' } });
+                lastHttpStatus = res.status;
+                if (res.ok) return { files: await res.json(), folderName: 'quiz' };
+
+                // 404인 경우 루트 목록에서 대소문자 무시하고 quiz 폴더 탐색 (예: Quiz, QUIZ)
+                if (res.status === 404) {
+                  const rootRes = await fetch(`https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/contents`, {
+                    headers: { Accept: 'application/vnd.github.v3+json' }
+                  });
+                  lastHttpStatus = rootRes.status;
+                  if (rootRes.ok) {
+                    const rootItems = await rootRes.json();
+                    const quizDir = Array.isArray(rootItems)
+                      ? rootItems.find((it) => it && it.type === 'dir' && it.name.toLowerCase() === 'quiz')
+                      : null;
+                    if (quizDir) {
+                      const subRes = await fetch(
+                        `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/contents/${encodeURIComponent(quizDir.name)}`,
+                        { headers: { Accept: 'application/vnd.github.v3+json' } }
+                      );
+                      lastHttpStatus = subRes.status;
+                      if (subRes.ok) return { files: await subRes.json(), folderName: quizDir.name };
+                    }
+                  }
+                }
+                return null;
+              };
+
+              let result = await fetchQuizDir(ghInfo.owner, ghInfo.repo);
+              if (!result && ghInfo.repo !== `${ghInfo.owner}.github.io`) {
+                result = await fetchQuizDir(ghInfo.owner, `${ghInfo.owner}.github.io`);
+              }
+
+              if (!result || !Array.isArray(result.files)) {
+                if (lastHttpStatus === 403) {
+                  throw new Error('GitHub API 호출 한도 초과(403). update-games.yml에 quizzes.json 자동 생성을 추가해 주세요.');
+                }
+                if (lastHttpStatus === 404) {
+                  throw new Error('저장소의 quiz 폴더를 찾지 못했습니다(404). 폴더명 또는 Public 설정을 확인해 주세요.');
+                }
+                throw new Error(`폴더 목록을 불러오지 못했습니다 (HTTP ${lastHttpStatus || 'ERR'}).`);
+              }
+
+              const jsFiles = result.files.filter(
+                (f) => f && f.type === 'file' && /\.js$/i.test(f.name) && f.name.toLowerCase() !== 'quiz-list.js'
+              );
+
+              if (jsFiles.length === 0) {
+                this.setScanStatus(`${result.folderName} 폴더에서 .js 퀴즈 파일을 찾지 못했습니다.`, 'warn');
+                this.catalog = [...manualUploads];
+                this.renderList();
+                return 0;
+              }
+
+              discovered = jsFiles.map((f, idx) => ({
+                id: 'gh_' + idx + '_' + f.name,
+                title: f.name.replace(/\.js$/i, ''),
+                file: f.name,
+                basePath: `../${encodeURIComponent(result.folderName)}/`,
+                downloadUrl: f.download_url || null,
+                data: null,
+                selected: idx === 0 && manualUploads.length === 0
+              }));
+              sourceLabel = `${result.folderName} 폴더`;
             }
-
-            // 같은 폴더 내 모든 .js 파일 필터링 (이전 quiz-list.js 등이 남아있어도 무시)
-            const jsFiles = filesJson.filter(
-              (f) => f && f.type === 'file' && /\.js$/i.test(f.name) && f.name.toLowerCase() !== 'quiz-list.js'
-            );
-
-            if (jsFiles.length === 0) {
-              this.setScanStatus('quiz 폴더에서 .js 퀴즈 파일을 찾지 못했습니다. 퀴즈 .js 파일을 quiz 폴더에 업로드해 주세요.', 'warn');
-              this.catalog = [...manualUploads];
-              this.renderList();
-              return 0;
-            }
-
-            const discovered = jsFiles.map((f, idx) => ({
-              id: 'gh_' + idx + '_' + f.name,
-              title: f.name.replace(/\.js$/i, ''),
-              file: f.name,
-              downloadUrl: f.download_url || null,
-              data: null,
-              selected: idx === 0 && manualUploads.length === 0
-            }));
 
             this.catalog = [...discovered, ...manualUploads];
-            this.setScanStatus(`✅ quiz 폴더에서 ${discovered.length}개의 퀴즈 파일을 자동으로 찾았습니다!`, 'success');
+            this.setScanStatus(`✅ ${sourceLabel}에서 ${discovered.length}개의 퀴즈 파일을 찾았습니다!`, 'success');
             this.renderList();
 
             // 각 .js 파일 내용을 백그라운드로 불러와 문제 개수(필수/하/중/상) 미리 표시 및 유효성 검증
@@ -3866,27 +3934,25 @@
               discovered.map(async (item) => {
                 const parsed = await this.ensureItemLoaded(item);
                 if (!parsed) {
-                  // quizData가 없는 일반 JS 파일이면 목록에서 제외
                   this.catalog = this.catalog.filter((c) => c.id !== item.id);
                 } else if (!firstValidApplied && gameState.mode === 'LOBBY') {
                   firstValidApplied = true;
-                  loadQuizDataObject(parsed, `${item.title} (GitHub 자동 연동)`);
+                  loadQuizDataObject(parsed, `${item.title} (자동 연동)`);
                 }
               })
             );
 
-            // 첫 번째 유효 항목이 제거되었다면 남은 항목 중 첫 번째 자동 선택
             if (this.catalog.length > 0 && !this.catalog.some((c) => c.selected)) {
               this.catalog[0].selected = true;
             }
 
             const validGhCount = this.catalog.filter((c) => c.id.startsWith('gh_')).length;
-            this.setScanStatus(`✅ quiz 폴더에서 ${validGhCount}개의 퀴즈 파일을 자동으로 불러왔습니다!`, 'success');
+            this.setScanStatus(`✅ ${sourceLabel}에서 ${validGhCount}개의 퀴즈 파일을 자동으로 불러왔습니다!`, 'success');
             this.renderList();
             return validGhCount;
           } catch (err) {
             console.warn('GitHub 폴더 자동 탐색 실패:', err);
-            this.setScanStatus('GitHub 폴더 자동 검색에 실패했습니다. (Public 저장소 여부 확인 또는 직접 추가 이용)', 'warn');
+            this.setScanStatus(err && err.message ? err.message : 'GitHub 폴더 자동 검색에 실패했습니다. (Public 저장소 여부 확인 또는 직접 추가 이용)', 'warn');
             return 0;
           } finally {
             this.isScanning = false;
@@ -3905,15 +3971,23 @@
             return fn();
           };
 
-          // 1) 같은 폴더 상대 경로 fetch
+          // 1) 상대 경로 fetch (../quiz/ 및 ./quiz/ 순차 시도)
           if (item.file) {
-            try {
-              const parsed = await tryFetchParse(`../quiz/${encodeURIComponent(item.file)}`);
-              if (parsed) {
-                item.data = parsed;
-                return item.data;
-              }
-            } catch (e) {}
+            const encoded = encodeURIComponent(item.file);
+            const pathCandidates = [
+              `${item.basePath || '../quiz/'}${encoded}`,
+              `../quiz/${encoded}`,
+              `./quiz/${encoded}`
+            ];
+            for (const url of [...new Set(pathCandidates)]) {
+              try {
+                const parsed = await tryFetchParse(url);
+                if (parsed) {
+                  item.data = parsed;
+                  return item.data;
+                }
+              } catch (e) {}
+            }
           }
 
           // 2) GitHub raw download_url 폴백
@@ -3933,7 +4007,7 @@
               await new Promise((resolve) => {
                 window.quizData = undefined;
                 const sc = document.createElement('script');
-                sc.src = `../quiz/${item.file}`;
+                sc.src = `${item.basePath || '../quiz/'}${item.file}`;
                 sc.onload = () => {
                   if (window.quizData) item.data = JSON.parse(JSON.stringify(window.quizData));
                   sc.remove();
