@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- 검강화게임 v33.03 -->
+<!-- 검강화게임 v33.05 -->
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
@@ -1030,7 +1030,7 @@
     <button id="help-btn" onclick="openHelpModal()" title="게임 방법 안내">❓ 도움말</button>
     <button id="sound-btn" onclick="toggleSound()" title="효과음 켜기/끄기">🔊 효과음</button>
     <button id="fullscreen-btn" onclick="toggleFullscreen()" title="전체화면 전환">⛶ 전체화면</button>
-    <div id="version-badge">v33.03</div>
+    <div id="version-badge">v33.05</div>
 
     <!-- Title Screen -->
     <div id="title-screen">
@@ -1128,10 +1128,12 @@
                             <th>푼 문제</th>
                             <th>공짜 클릭</th>
                             <th>아이템</th>
+                            <th>총 골드</th>
+                            <th>배율</th>
                         </tr>
                     </thead>
                     <tbody id="ranking-table-body">
-                        <tr><td colspan="13" style="padding:20px; color:#7f8c8d;">랭킹 데이터를 불러오는 중...</td></tr>
+                        <tr><td colspan="15" style="padding:20px; color:#7f8c8d;">랭킹 데이터를 불러오는 중...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -1233,7 +1235,7 @@
                         <div>🔥 배율: <span id="click-multiplier-display" style="color:#e74c3c; font-weight:bold;">x1.0</span></div>
                         <span style="font-size:0.85rem; color:#7f8c8d;">(최고 희생: Lv.<span id="sacrificed-level-display">0</span>)</span>
                     </div>
-                    <button onclick="sacrificeSword()" style="width:100%; font-size:0.98rem; padding:9px 6px; background:#9b59b6; color:#fff; border:2px solid #8e44ad; border-radius:5px; font-weight:bold; cursor:pointer; box-sizing:border-box; line-height:1.3; word-break:keep-all;">🗡️ 현재 검 희생하기<br>(Lv.11 이상)</button>
+                    <button id="btn-sacrifice-sword" onclick="sacrificeSword()" style="width:100%; font-size:0.98rem; padding:9px 6px; background:#9b59b6; color:#fff; border:2px solid #8e44ad; border-radius:5px; font-weight:bold; cursor:pointer; box-sizing:border-box; line-height:1.3; word-break:keep-all;">🗡️ 현재 검 희생하기<br>(Lv.<span id="sacrifice-min-level-display">11</span> 이상)</button>
                 </div>
             </div>
 
@@ -1375,7 +1377,7 @@
 
     <script>
         /** --- 게임 버전 정보 --- */
-        const GAME_VERSION = 'v33.03';
+        const GAME_VERSION = 'v33.05';
 
         /** --- 자동 탐색된 퀴즈 파일 목록 --- */
         let QUIZ_FILES = [];
@@ -1820,7 +1822,8 @@
             destroyCount: 0,
             problemsSolved: 0,
             freeGoldClicks: 0,
-            itemsUsed: 0
+            itemsUsed: 0,
+            totalGoldEarned: 0
         };
         let unlockedTiers = new Set();
         let solvedRequiredQs = new Set();
@@ -1887,7 +1890,8 @@
                 totalCorrectAnswers,
                 recentQuestions,
                 unlockedTiers: Array.from(unlockedTiers),
-                solvedRequiredQs: Array.from(solvedRequiredQs)
+                solvedRequiredQs: Array.from(solvedRequiredQs),
+                totalGoldEarned: playerStats.totalGoldEarned
             };
         };
 
@@ -1902,6 +1906,7 @@
             recentQuestions = state.recentQuestions ?? [];
             unlockedTiers = new Set(state.unlockedTiers ?? []);
             solvedRequiredQs = new Set(state.solvedRequiredQs ?? []);
+            playerStats.totalGoldEarned = state.totalGoldEarned ?? playerStats.totalGoldEarned ?? 0;
             updateGoldUI();
             updateItemUI();
             updateProbUI();
@@ -2273,7 +2278,7 @@
                 const isInitialRequired = isRequiredQuiz && pendingUnlockTier && pendingUnlockTier.cap === 0;
                 
                 if (!isInitialRequired) {
-                    gold += reward;
+                    addGold(reward);
                     updateGoldUI();
                 }
                 
@@ -2297,7 +2302,7 @@
                             msg += " 🎉 실패 확률 -10% 버프 획득!";
                             addLog("🔥 5연속 정답! 1회 실패 확률 감소 버프가 적용됩니다.", "c-s");
                         } else {
-                            gold += 500;
+                            addGold(500);
                             msg += " 🎉 500 골드 보너스 획득!";
                             addLog("🔥 5연속 정답! 보너스 500 골드가 추가 지급되었습니다.", "c-s");
                             updateGoldUI();
@@ -2333,7 +2338,7 @@
                             `;
                         } else {
                             unlockedTiers.add(0);
-                            gold += 500;
+                            addGold(500);
                             updateGoldUI();
                             addLog(`🔓 [해금] 모든 필수 문제를 해결하여 강화 화면이 해금되고 500G를 획득했습니다!`, "c-s");
                             resultMsg.innerHTML = `정답입니다!<br>🔓 모든 필수 문제를 해결하여 강화가 해금되었습니다! (+500G)`;
@@ -2395,6 +2400,12 @@
         }
 
         /** --- SHOP & MONEY --- */
+        function addGold(amount) {
+            if (!Number.isFinite(amount) || amount <= 0) return;
+            gold = Math.round((gold + amount) * 10) / 10;
+            playerStats.totalGoldEarned = Math.round((playerStats.totalGoldEarned + amount) * 10) / 10;
+        }
+
         function updateGoldUI() {
             document.getElementById('gold-display').innerText = `보유 골드: ${Number(gold).toFixed(1)} G`;
         }
@@ -2478,6 +2489,10 @@
             let mult = Math.max(1, sacrificedLevel / 10);
             document.getElementById('click-multiplier-display').innerText = `x${mult.toFixed(1)}`;
             document.getElementById('sacrificed-level-display').innerText = sacrificedLevel;
+            const minSacEl = document.getElementById('sacrifice-min-level-display');
+            if (minSacEl) {
+                minSacEl.innerText = Math.max(11, sacrificedLevel + 1);
+            }
             
             const btn = document.getElementById('btn-free-gold');
             if (btn) {
@@ -2554,14 +2569,14 @@
                 addLog(`[기적!] 땅을 파다가 '장비 파괴 보호권'을 발견했습니다!`, "c-s");
             } else if (rand < 0.004) {
                 let earned = 250 * mult;
-                gold += earned;
+                addGold(earned);
                 addLog(`[초대박!] 엄청난 금화를 발견했습니다! ${earned.toFixed(1)}골드 획득!`, "c-s");
             } else if (rand < 0.054) {
                 let earned = 3 * mult;
-                gold += earned;
+                addGold(earned);
                 addLog(`[대박!] 공짜 돈벌기로 ${earned.toFixed(1)}골드를 얻었습니다!`, "c-s");
             } else {
-                gold += 1 * mult;
+                addGold(1 * mult);
             }
             
             gold = Math.round(gold * 10) / 10;
@@ -3495,6 +3510,8 @@
                 problemsSolved: playerStats.problemsSolved,
                 freeGoldClicks: playerStats.freeGoldClicks,
                 itemsUsed: playerStats.itemsUsed,
+                totalGoldEarned: playerStats.totalGoldEarned,
+                multiplier: Number(Math.max(1, sacrificedLevel / 10).toFixed(1)),
                 version: GAME_VERSION
             };
         }
@@ -3503,7 +3520,7 @@
             const s = getCurrentRankingPayload();
             const el = document.getElementById('rank-my-stats');
             if (el) {
-                el.innerHTML = `<strong>내 현재 기록 (${s.version}):</strong> 최고 <strong>Lv.${s.maxLevel}</strong> | 강화 ${s.enhanceCount}회 (대성공 ${s.greatCount} / 성공 ${s.successCount} / 유지 ${s.maintainCount} / 실패 ${s.failCount} / 파괴 ${s.destroyCount}) | 푼 문제 ${s.problemsSolved}개 | 공짜 돈벌기 ${s.freeGoldClicks}회 | 사용 아이템 ${s.itemsUsed}개`;
+                el.innerHTML = `<strong>내 현재 기록 (${s.version}):</strong> 최고 <strong>Lv.${s.maxLevel}</strong> | 강화 ${s.enhanceCount}회 (대성공 ${s.greatCount} / 성공 ${s.successCount} / 유지 ${s.maintainCount} / 실패 ${s.failCount} / 파괴 ${s.destroyCount}) | 푼 문제 ${s.problemsSolved}개 | 공짜 돈벌기 ${s.freeGoldClicks}회 | 사용 아이템 ${s.itemsUsed}개 | 획득 총 골드 ${Number(s.totalGoldEarned ?? 0).toLocaleString(undefined, { maximumFractionDigits: 1 })}G | 배율 x${Number(s.multiplier ?? 1).toFixed(1)}`;
             }
         }
 
@@ -3516,10 +3533,10 @@
         async function refreshRankings() {
             const tbody = document.getElementById('ranking-table-body');
             if (typeof window.loadFirebaseRankings !== 'function') {
-                tbody.innerHTML = '<tr><td colspan="13" style="padding:20px; color:#c0392b;">Firebase 연결을 초기화하는 중입니다. 잠시 후 다시 시도하세요.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="15" style="padding:20px; color:#c0392b;">Firebase 연결을 초기화하는 중입니다. 잠시 후 다시 시도하세요.</td></tr>';
                 return;
             }
-            tbody.innerHTML = '<tr><td colspan="13" style="padding:20px; color:#7f8c8d;">⏳ 랭킹 불러오는 중...</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="15" style="padding:20px; color:#7f8c8d;">⏳ 랭킹 불러오는 중...</td></tr>';
             await window.loadFirebaseRankings();
         }
 
@@ -3611,7 +3628,7 @@
         }
 
         function getVersionBucket(recordVersion) {
-            const curVer = typeof GAME_VERSION !== 'undefined' ? String(GAME_VERSION) : 'v33.03';
+            const curVer = typeof GAME_VERSION !== 'undefined' ? String(GAME_VERSION) : 'v33.05';
             if (!recordVersion) return 'LEGACY';
             const recStr = String(recordVersion).trim();
             if (recStr === curVer) return 'CURRENT';
@@ -3662,14 +3679,14 @@
             const bar = document.getElementById('rank-version-filter-bar');
             if (!bar) return;
 
-            const curVer = typeof GAME_VERSION !== 'undefined' ? GAME_VERSION : 'v33.03';
+            const curVer = typeof GAME_VERSION !== 'undefined' ? GAME_VERSION : 'v33.05';
             const allCount = cachedRankingsList.length;
             const currentCount = cachedRankingsList.filter(r => getVersionBucket(r.version) === 'CURRENT').length;
             const legacyCount = cachedRankingsList.filter(r => getVersionBucket(r.version) === 'LEGACY').length;
 
             const options = [
                 { key: 'ALL', label: `전체 버전 (${allCount})` },
-                { key: 'CURRENT', label: `현재 버전 · ${curVer} (${currentCount})` },
+                { key: 'CURRENT', label: `현재 버전 (${currentCount})` },
                 { key: 'LEGACY', label: `이전 버전 (${legacyCount})` }
             ];
 
@@ -3736,7 +3753,7 @@
             });
 
             if (filtered.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="13" style="padding:20px; color:#7f8c8d;">선택한 조건에 해당하는 랭킹 기록이 없습니다.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="15" style="padding:20px; color:#7f8c8d;">선택한 조건에 해당하는 랭킹 기록이 없습니다.</td></tr>';
                 return;
             }
 
@@ -3764,13 +3781,15 @@
                     <td style="font-weight:bold;">${r.problemsSolved ?? 0}</td>
                     <td>${r.freeGoldClicks ?? 0}</td>
                     <td style="color:#8e44ad; font-weight:bold;">${r.itemsUsed ?? 0}</td>
+                    <td style="color:#d35400; font-weight:bold;">${Number(r.totalGoldEarned ?? 0).toLocaleString(undefined, { maximumFractionDigits: 1 })}G</td>
+                    <td style="color:#e74c3c; font-weight:bold;">x${Number(r.multiplier ?? 1).toFixed(1)}</td>
                 </tr>`;
             }).join('');
         }
 
         window.submitFirebaseRanking = async (grade, classNum, number, stats) => {
             const isTeacher = (grade === 1206 && classNum === 1206 && number === 1206);
-            const ver = stats.version || (typeof GAME_VERSION !== 'undefined' ? GAME_VERSION : 'v33.03');
+            const ver = stats.version || (typeof GAME_VERSION !== 'undefined' ? GAME_VERSION : 'v33.05');
             const docId = isTeacher ? `teacher-1206-${ver}` : `${grade}-${classNum}-${number}-${ver}`;
             const displayLabel = isTeacher ? '과학쌤' : `${grade}${classNum}${String(number).padStart(2, '0')}`;
             const docRef = doc(db, 'rankings', docId);
@@ -3790,6 +3809,8 @@
                 problemsSolved: stats.problemsSolved,
                 freeGoldClicks: stats.freeGoldClicks,
                 itemsUsed: stats.itemsUsed ?? 0,
+                totalGoldEarned: stats.totalGoldEarned ?? 0,
+                multiplier: stats.multiplier ?? 1,
                 updatedAt: Date.now()
             });
         };
@@ -3814,7 +3835,7 @@
                 renderRankingRows();
             } catch (err) {
                 console.error(err);
-                tbody.innerHTML = `<tr><td colspan="13" style="padding:20px; color:#c0392b;">랭킹 불러오기 실패 (Firestore 보안 규칙을 확인해 주세요)</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="15" style="padding:20px; color:#c0392b;">랭킹 불러오기 실패 (Firestore 보안 규칙을 확인해 주세요)</td></tr>`;
             }
         };
     </script>
