@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- STAR.IO : 별의 일생 | Version: v30 -->
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
@@ -222,7 +223,7 @@
           <div class="flex items-center justify-between flex-wrap gap-2">
             <div>
               <h3 class="text-sm sm:text-base font-extrabold text-white">📚 1. 수업에 적용할 퀴즈 파일 선택 (다중 선택 가능)</h3>
-              <p id="teacherScanStatus" class="text-[11px] text-slate-400 mt-0.5">GitHub 저장소에서 HTML과 같은 폴더의 퀴즈 파일(.js)을 자동으로 인식합니다.</p>
+              <p id="teacherScanStatus" class="text-[11px] text-slate-400 mt-0.5">GitHub 저장소의 quiz 폴더에 있는 퀴즈 파일(.js)을 자동으로 인식합니다.</p>
             </div>
             <div class="flex items-center gap-2">
               <button type="button" id="btnTeacherRescan" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 text-xs font-extrabold transition">
@@ -260,10 +261,7 @@
                 <span class="text-xs font-bold text-slate-300 shrink-0">분</span>
               </div>
             </div>
-            <label class="flex items-center justify-between bg-slate-950/70 border border-slate-800 rounded-xl px-3 py-2.5 cursor-pointer">
-              <span class="text-xs font-bold text-slate-200">빈 자리 AI 봇 채우기</span>
-              <input id="chkTeacherBots" type="checkbox" class="w-4 h-4 accent-fuchsia-500" />
-            </label>
+
             <div class="text-[11px] text-slate-400 leading-relaxed bg-slate-950/50 rounded-xl p-3 border border-slate-800">
               💡 <strong>GitHub 자동 연동:</strong> GitHub Pages 저장소에 <code class="text-sky-300">index.html</code>과 같은 폴더에 퀴즈 <code class="text-sky-300">.js</code> 파일(예: <code class="text-sky-300">태양계.js</code>, <code class="text-sky-300">우주.js</code>)을 올려두면 별도 목록 파일 없이 자동으로 표시됩니다.
             </div>
@@ -630,14 +628,12 @@
   <!-- ==================== 7. 업그레이드 모달 (진화 / 스킬 / 능력 강화) ==================== -->
   <div id="skillModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 pt-12 sm:p-5 bg-slate-950/85 backdrop-blur-md">
     <div class="glass-panel rounded-3xl w-full max-w-5xl p-5 sm:p-6 flex flex-col gap-4 max-h-[94vh] overflow-y-auto custom-scroll">
-      <div class="flex items-center justify-between border-b border-slate-700/70 pb-3 flex-wrap gap-2">
+      <div class="flex items-start justify-between gap-3 border-b border-slate-700/70 pb-3">
         <div>
           <h2 class="text-lg sm:text-2xl font-black text-white">⚡ 과학 퀴즈 업그레이드</h2>
           <p class="text-xs text-slate-400 mt-0.5">과학 문제를 맞혀 새로운 진화 단계와 우주 스킬, 능력을 강화하세요.</p>
         </div>
-        <button id="btnCloseSkill" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs">
-          닫기 ✕
-        </button>
+        <button id="btnCloseSkill" title="닫기" class="w-9 h-9 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold shrink-0">✕</button>
       </div>
 
       <!-- 탭 바 -->
@@ -699,7 +695,7 @@
   </div>
 
   <!-- 로컬 테스트용 기본 퀴즈 파일 로드 시도 (GitHub Pages에서는 같은 폴더의 모든 .js를 자동 탐색) -->
-  <script src="중1 7단원 01태양계 구성원.js" onerror="console.info('기본 퀴즈 파일 없음: GitHub 폴더 자동 탐색 또는 직접 추가 사용')"></script>
+  <script src="../quiz/중1 7단원 01태양계 구성원.js" onerror="console.info('기본 퀴즈 파일 없음: GitHub 폴더 자동 탐색 또는 직접 추가 사용')"></script>
 
   <script>
     (function () {
@@ -734,12 +730,20 @@
          1. 핵심 상수 및 진화 단계 / 스킬 / 능력 정의
          ===================================================================== */
       const ARENA_RADIUS = 2600;
-      const MAX_DUST_COUNT = 380;
+      const NEWBIE_ZONE_RADIUS = 700;
+      const MAX_DUST_COUNT = 520;
+      const NEWBIE_DUST_RATIO = 0.20;
+      const NEWBIE_DUST_COUNT = Math.round(MAX_DUST_COUNT * NEWBIE_DUST_RATIO);
       const MAX_ANTIMATTER_COUNT = 5;
       const ANTIMATTER_RESPAWN_SEC = 7.5;
       const BOT_COUNT = 22;
       const MATCH_DURATION = 900; // 15분
       const AIM_RANGE = 400;
+      const ANTIMATTER_AIM_RANGE = 680;
+      const ANTIMATTER_SPEED = 760;
+      const ANTIMATTER_LIFE = 1.15; // 실제 사거리 874px > 블랙홀 중력장(최대 400~460px)
+      const ANTIMATTER_IMMUNE_SEC = 3.0;
+      const BH_PASSIVE_MAX_RADIUS = 400;
       const REBIRTH_DUST_REQUIRED = 15;
       const SAVE_KEY = 'star_io_science_save_v5';
 
@@ -784,7 +788,7 @@
         { key: 'gravityRange', name: '중력 범위',        icon: '🧲', maxLv: 5, desc: '주변 성간 물질 흡수 및 중력장 범위가 증가합니다. (Lv.0: 50% → Lv.5: 100%)' },
         { key: 'fusionEff',    name: '핵융합 효율',      icon: '⚡', maxLv: 5, desc: '물질 및 경쟁 별 흡수 시 얻는 질량이 레벨당 +12% 증가합니다.' },
         { key: 'speedBoost',   name: '추진력',           icon: '🛸', maxLv: 5, desc: '기본 이동 속도가 레벨당 +8% 빨라집니다.' },
-        { key: 'cooldownRed',  name: '스킬 쿨타임 감소', icon: '⏱️', maxLv: 5, desc: '중력장(E)과 플레어(Q) 재사용 대기시간이 레벨당 -10% 감소합니다. (최대 -50%)' }
+        { key: 'cooldownRed',  name: '스킬 쿨타임 감소', icon: '⏱️', maxLv: 5, desc: '중력장(E)과 플레어(Q) 재사용 대기시간이 레벨당 -7% 감소합니다. (최대 -35%)' }
       ];
 
       /* =====================================================================
@@ -1187,6 +1191,62 @@
         return STAGES.find((s) => s.id === id) || STAGES[0];
       }
 
+      function isPreProtostar(stageId) {
+        return stageId === 'dust' || stageId === 'nebula';
+      }
+
+      function isInNewbieZone(x, y) {
+        return Math.hypot(x, y) <= NEWBIE_ZONE_RADIUS;
+      }
+
+      function isProtectedInNewbieZone(predatorStageId, target) {
+        if (!target) return false;
+        return !isPreProtostar(predatorStageId) && isPreProtostar(target.stageId) && isInNewbieZone(target.x, target.y);
+      }
+
+      function findSafeSpawnPosition(spawnOutsideNewbie) {
+        const obstacles = [];
+        for (const b of gameState.bots) {
+          obstacles.push({ x: b.x, y: b.y });
+        }
+        if (gameState.playType === 'MULTI') {
+          const nowMs = Date.now();
+          gameState.remotePlayers.forEach((rp) => {
+            if (rp.alive && nowMs - (rp.updatedAt || 0) <= 15000) {
+              obstacles.push({ x: rp.x, y: rp.y });
+            }
+          });
+        }
+
+        let bestX = 0;
+        let bestY = 0;
+        let bestMinDist = -1;
+        const candidates = 28;
+        for (let i = 0; i < candidates; i++) {
+          const ang = Math.random() * Math.PI * 2;
+          let dist;
+          if (spawnOutsideNewbie) {
+            dist = NEWBIE_ZONE_RADIUS + 200 + Math.sqrt(Math.random()) * (ARENA_RADIUS - NEWBIE_ZONE_RADIUS - 420);
+          } else {
+            dist = Math.sqrt(Math.random()) * (NEWBIE_ZONE_RADIUS - 90);
+          }
+          const cx = Math.cos(ang) * dist;
+          const cy = Math.sin(ang) * dist;
+          let minDist = Infinity;
+          for (const ob of obstacles) {
+            const d = Math.hypot(cx - ob.x, cy - ob.y);
+            if (d < minDist) minDist = d;
+          }
+          if (obstacles.length === 0) return { x: cx, y: cy };
+          if (minDist > bestMinDist) {
+            bestMinDist = minDist;
+            bestX = cx;
+            bestY = cy;
+          }
+        }
+        return { x: bestX, y: bestY };
+      }
+
       function isStageUnlocked(stageId) {
         if (stageId === 'dust') return true;
         if (['nebula', 'protostar', 'main_seq', 'red_giant', 'white_dwarf'].includes(stageId)) {
@@ -1208,7 +1268,7 @@
       function getGravityRangeMult() { return 0.5 + (saveData.stats.gravityRange || 0) * 0.1; }
       function getFusionMult() { return 1 + (saveData.stats.fusionEff || 0) * 0.12; }
       function getSpeedMult() { return 1 + (saveData.stats.speedBoost || 0) * 0.08; }
-      function getCooldownMult() { return Math.max(0.5, 1 - (saveData.stats.cooldownRed || 0) * 0.1); }
+      function getCooldownMult() { return Math.max(0.65, 1 - (saveData.stats.cooldownRed || 0) * 0.07); }
 
       function getEntityRadius(ent) {
         const st = getStageById(ent.stageId);
@@ -1219,6 +1279,54 @@
           return Math.min(48, st.baseRadius + Math.sqrt(Math.max(0, ent.mass - 140)) * 0.65);
         }
         return st.baseRadius + Math.sqrt(Math.max(0, ent.mass - st.minMass)) * 0.42;
+      }
+
+      function getBlackHoleGravityRadius(ent) {
+        const r = getEntityRadius(ent);
+        return Math.min(BH_PASSIVE_MAX_RADIUS, r + 210);
+      }
+
+      function getMassResistanceFactor(mass) {
+        // 질량이 클수록 중력 인력 및 플레어 넉백에 대한 저항력 증가 (최소 0.25배)
+        return Math.max(0.25, Math.min(1.0, 1 / (1 + Math.max(0, (mass || 30) - 200) / 1400)));
+      }
+
+      function getPrevStageForPlayer(stageId) {
+        if (stageId === 'black_hole') return getStageById('neutron_star');
+        if (stageId === 'neutron_star') return getStageById('red_supergiant');
+        if (stageId === 'red_supergiant') return getStageById('main_seq');
+        if (stageId === 'white_dwarf') return getStageById('red_giant');
+        if (stageId === 'red_giant') return getStageById('main_seq');
+        if (stageId === 'main_seq') return getStageById('protostar');
+        if (stageId === 'protostar') return getStageById('nebula');
+        if (stageId === 'nebula') return getStageById('dust');
+        return null;
+      }
+
+      function checkPlayerDemotion() {
+        const p = gameState.player;
+        if (!p) return;
+        let demoted = false;
+        let safety = 0;
+        while (safety < 10) {
+          safety++;
+          const st = getStageById(p.stageId);
+          if (!st || st.minMass <= 0) break;
+          if (p.mass < st.minMass * 0.75) {
+            const prev = getPrevStageForPlayer(p.stageId);
+            if (!prev) break;
+            p.stageId = prev.id;
+            p.rebirthDustCount = 0;
+            demoted = true;
+          } else {
+            break;
+          }
+        }
+        if (demoted) {
+          const curSt = getStageById(p.stageId);
+          addFloatingText(p.x, p.y - 30, `⬇️ ${curSt.name} 단계로 하락!`, '#fda4af');
+          showToast(`⚠️ 질량이 크게 감소해 [${curSt.name}] 단계로 내려갔습니다!`, 'warn');
+        }
       }
 
       function getNextStageForPlayer(stageId) {
@@ -1327,9 +1435,18 @@
         }
       }
 
-      function createRandomDustPayload(pal = gameState.dustPalette) {
+      function createRandomDustPayload(pal = gameState.dustPalette, zone = 'any') {
         const angle = Math.random() * Math.PI * 2;
-        const dist = Math.sqrt(Math.random()) * (ARENA_RADIUS - 80);
+        let dist;
+        if (zone === 'newbie') {
+          dist = Math.sqrt(Math.random()) * (NEWBIE_ZONE_RADIUS - 28);
+        } else if (zone === 'outer') {
+          const minR = NEWBIE_ZONE_RADIUS + 20;
+          const maxR = ARENA_RADIUS - 80;
+          dist = Math.sqrt(minR * minR + Math.random() * (maxR * maxR - minR * minR));
+        } else {
+          dist = Math.sqrt(Math.random()) * (ARENA_RADIUS - 80);
+        }
         const palette = pal && pal.length ? pal : DUST_PALETTES[0];
         return {
           x: Math.round(Math.cos(angle) * dist),
@@ -1340,20 +1457,21 @@
         };
       }
 
-      function spawnOneDust() {
-        const p = createRandomDustPayload(gameState.dustPalette);
+      function spawnOneDust(zone = 'any') {
+        const p = createRandomDustPayload(gameState.dustPalette, zone);
         gameState.dusts.push({
           x: p.x,
           y: p.y,
           r: p.r,
           value: p.v,
-          color: p.c
+          color: p.c,
+          zone
         });
       }
 
       function spawnOneAntimatter() {
         const angle = Math.random() * Math.PI * 2;
-        const dist = 250 + Math.sqrt(Math.random()) * (ARENA_RADIUS - 400);
+        const dist = NEWBIE_ZONE_RADIUS + 180 + Math.sqrt(Math.random()) * (ARENA_RADIUS - NEWBIE_ZONE_RADIUS - 340);
         gameState.antimatters.push({
           x: Math.cos(angle) * dist,
           y: Math.sin(angle) * dist,
@@ -1391,7 +1509,8 @@
           preferMassive,
           wanderAngle: Math.random() * Math.PI * 2,
           wanderTimer: 1 + Math.random() * 2.5,
-          invuln: 1.5
+          invuln: 1.5,
+          antimatterImmune: 0
         };
       }
 
@@ -1465,7 +1584,9 @@
 
         initBgStars();
         if (playType !== 'MULTI') {
-          for (let i = 0; i < MAX_DUST_COUNT; i++) spawnOneDust();
+          for (let i = 0; i < MAX_DUST_COUNT; i++) {
+            spawnOneDust(i < NEWBIE_DUST_COUNT ? 'newbie' : 'outer');
+          }
         }
 
         const hasReconnectPenalty = !!gameState.reconnectPenaltyNoStartMass;
@@ -1473,24 +1594,33 @@
         gameState.reconnectPenaltyNoStartMass = false;
         gameState.reconnectPenaltyRemaining = 0;
 
+        const botCount = playType === 'MULTI' ? 0 : BOT_COUNT;
+        for (let i = 0; i < botCount; i++) {
+          gameState.bots.push(spawnBot(i));
+        }
+
         const startAsProtostar = !hasReconnectPenalty && !!saveData.startProtostarUnlocked;
         const startMass = hasReconnectPenalty
           ? 30
           : (startAsProtostar
             ? getStageById('protostar').minMass + (saveData.stats.startMass || 0) * 22
             : getStartMass());
+        const spawnPos = findSafeSpawnPosition(startAsProtostar);
         gameState.player = {
           id: MultiplayerBridge.myId || 'player_main',
           isPlayer: true,
           name: pName,
-          x: (Math.random() - 0.5) * 600,
-          y: (Math.random() - 0.5) * 600,
+          x: spawnPos.x,
+          y: spawnPos.y,
           vx: 0,
           vy: 0,
           mass: startMass,
           maxMass: startMass,
           stageId: startAsProtostar ? 'protostar' : 'dust',
           invuln: 3.0,
+          antimatterImmune: 0,
+          bhRemotePullAccum: 0,
+          boosting: false,
           gravityCooldown: 0,
           flareCooldown: 0,
           antimatterAmmo: 0,
@@ -1498,13 +1628,6 @@
           lockedWarnedStage: null,
           reconnectPenaltyTimer: penaltySec
         };
-
-        const botCount = playType === 'MULTI'
-          ? (MultiplayerBridge.roomIncludeBots ? 14 : 0)
-          : BOT_COUNT;
-        for (let i = 0; i < botCount; i++) {
-          gameState.bots.push(spawnBot(i));
-        }
 
         gameState.camera.x = gameState.player.x;
         gameState.camera.y = gameState.player.y;
@@ -1556,6 +1679,9 @@
             if (isStageUnlocked(next.id)) {
               p.stageId = next.id;
               p.rebirthDustCount = 0;
+              if (next.id === 'protostar') {
+                p.invuln = Math.max(p.invuln || 0, 3.0);
+              }
               evolved = true;
               SoundFX.evolve();
               addFloatingText(p.x, p.y - 30, `✨ ${next.name} 진화!`, '#fde047');
@@ -1572,6 +1698,7 @@
                 showToast('🏆 중성자별 도달! 이제 업그레이드에서 [블랙홀 해금]에 도전할 수 있습니다!', 'success');
               }
               if (p.stageId === 'black_hole') {
+                p.antimatterAmmo = 0;
                 triggerBlackHoleEvent(p.name);
               }
               persistSaveData();
@@ -1620,20 +1747,31 @@
       function activateGravitySkill() {
         const p = gameState.player;
         if (!p || gameState.mode !== 'PLAYING') return;
+        if (p.stageId === 'black_hole') {
+          showToast('🕳️ 블랙홀은 상시 중력장이 발동 중이어서 액티브 중력장을 사용할 수 없습니다!', 'warn');
+          return;
+        }
         if (!(saveData.skills.gravityUnlocked > 0)) {
           showToast('🔒 중력장은 업그레이드 > 스킬 탭에서 해금해야 합니다!', 'warn');
           return;
         }
         if (p.gravityCooldown > 0) return;
         p.gravityCooldown = 10.0 * getCooldownMult();
-        const radius = (getEntityRadius(p) + 210) * getGravityRangeMult();
+        if (p.invuln > 0) p.invuln = 0;
+        const radius = Math.min(460, (getEntityRadius(p) + 210) * getGravityRangeMult());
         gameState.gravityWaves.push({
           ownerId: p.id,
+          isRemoteFx: false,
+          x: p.x,
+          y: p.y,
           duration: 2.2,
           maxDuration: 2.2,
           radius,
           remotePullAccum: 0.45
         });
+        if (gameState.playType === 'MULTI') {
+          MultiplayerBridge.broadcastSkillFx('gravity', { x: p.x, y: p.y, radius });
+        }
         SoundFX.skill();
         addFloatingText(p.x, p.y - 25, '🌀 중력장 발동!', '#60a5fa');
       }
@@ -1645,45 +1783,72 @@
           showToast('🔒 플레어는 업그레이드 > 스킬 탭에서 해금해야 합니다!', 'warn');
           return;
         }
+        if (isInNewbieZone(p.x, p.y)) {
+          showToast('🛡️ 뉴비 성장 구역 안에서는 플레어를 발사할 수 없습니다!', 'warn');
+          return;
+        }
         if (p.flareCooldown > 0) return;
         p.flareCooldown = 10.0 * getCooldownMult();
+        if (p.invuln > 0) p.invuln = 0;
         const selfCost = p.mass * 0.05;
         p.mass = Math.max(30, p.mass - selfCost);
+        checkPlayerDemotion();
         addFloatingText(p.x, p.y - 25, `🔥 -${Math.floor(selfCost)}`, '#fb923c');
         const speed = 640;
         const r = getEntityRadius(p);
+        const sx = p.x + Math.cos(angle) * (r + 12);
+        const sy = p.y + Math.sin(angle) * (r + 12);
         gameState.supernovaProjectiles.push({
-          x: p.x + Math.cos(angle) * (r + 12),
-          y: p.y + Math.sin(angle) * (r + 12),
+          x: sx,
+          y: sy,
           vx: Math.cos(angle) * speed,
           vy: Math.sin(angle) * speed,
           angle,
           life: 0.95,
           ownerId: p.id,
+          isRemoteFx: false,
           r: 13
         });
+        if (gameState.playType === 'MULTI') {
+          MultiplayerBridge.broadcastSkillFx('flare', { x: sx, y: sy, angle });
+        }
         SoundFX.skill();
       }
 
       function fireAntimatter(angle) {
         const p = gameState.player;
         if (!p || gameState.mode !== 'PLAYING') return;
+        if (p.stageId === 'black_hole') {
+          showToast('🕳️ 블랙홀은 반물질을 사용할 수 없습니다!', 'warn');
+          return;
+        }
         if (p.antimatterAmmo <= 0) {
           showToast('⚛️ 보유한 반물질이 없습니다! 블랙홀 출현 시 맵에서 획득하세요.', 'warn');
           return;
         }
+        if (isInNewbieZone(p.x, p.y)) {
+          showToast('🛡️ 뉴비 성장 구역 안에서는 반물질을 발사할 수 없습니다!', 'warn');
+          return;
+        }
         p.antimatterAmmo = 0;
-        const speed = 700;
+        if (p.invuln > 0) p.invuln = 0;
+        const speed = ANTIMATTER_SPEED;
         const r = getEntityRadius(p);
+        const sx = p.x + Math.cos(angle) * (r + 14);
+        const sy = p.y + Math.sin(angle) * (r + 14);
         gameState.antimatterProjectiles.push({
-          x: p.x + Math.cos(angle) * (r + 14),
-          y: p.y + Math.sin(angle) * (r + 14),
+          x: sx,
+          y: sy,
           vx: Math.cos(angle) * speed,
           vy: Math.sin(angle) * speed,
-          life: 1.15,
+          life: ANTIMATTER_LIFE,
           ownerId: p.id,
+          isRemoteFx: false,
           r: 15
         });
+        if (gameState.playType === 'MULTI') {
+          MultiplayerBridge.broadcastSkillFx('antimatter', { x: sx, y: sy, angle });
+        }
         SoundFX.skill();
         addFloatingText(p.x, p.y - 25, '⚛️ 반물질 발사!', '#e879f9');
       }
@@ -1695,6 +1860,7 @@
         for (let i = 0; i < gameState.bots.length; i++) {
           const b = gameState.bots[i];
           if (b.invuln > 0) b.invuln -= dt;
+          if (b.antimatterImmune > 0) b.antimatterImmune = Math.max(0, b.antimatterImmune - dt);
           b.wanderTimer -= dt;
           if (b.wanderTimer <= 0) {
             b.wanderTimer = 1.2 + Math.random() * 2.2;
@@ -1766,10 +1932,25 @@
           } else {
             for (let dIdx = gameState.dusts.length - 1; dIdx >= 0; dIdx--) {
               const du = gameState.dusts[dIdx];
+              if (!isPreProtostar(b.stageId) && isInNewbieZone(du.x, du.y)) continue;
               if (Math.hypot(du.x - b.x, du.y - b.y) < r + du.r + 6) {
                 b.mass += du.value * 0.9;
                 gameState.dusts.splice(dIdx, 1);
-                spawnOneDust();
+                spawnOneDust(du.zone || 'outer');
+              }
+            }
+          }
+
+          // 블랙홀 봇 상시 중력 패시브 (주변 플레이어 서서히 끌어당김)
+          if (b.stageId === 'black_hole' && gameState.player && gameState.mode === 'PLAYING') {
+            const tp = gameState.player;
+            if (tp.invuln <= 0 && !isProtectedInNewbieZone(b.stageId, tp)) {
+              const bhR = getBlackHoleGravityRadius(b);
+              const dp = Math.hypot(b.x - tp.x, b.y - tp.y);
+              if (dp > r + 12 && dp < bhR) {
+                const pull = (75 + (bhR - dp) * 0.32) * dt;
+                tp.x += ((b.x - tp.x) / dp) * pull;
+                tp.y += ((b.y - tp.y) / dp) * pull;
               }
             }
           }
@@ -1792,11 +1973,11 @@
             const rb = getEntityRadius(b);
             const dist = Math.hypot(a.x - b.x, a.y - b.y);
             if (dist < ra + rb - Math.min(ra, rb) * 0.35) {
-              if (a.mass > b.mass * 1.15) {
-                a.mass += b.mass * 0.35;
+              if (a.mass > b.mass * 1.15 && !isProtectedInNewbieZone(a.stageId, b)) {
+                a.mass += b.mass * 0.25;
                 gameState.bots[j] = spawnBot(j);
-              } else if (b.mass > a.mass * 1.15) {
-                b.mass += a.mass * 0.35;
+              } else if (b.mass > a.mass * 1.15 && !isProtectedInNewbieZone(b.stageId, a)) {
+                b.mass += a.mass * 0.25;
                 gameState.bots[i] = spawnBot(i);
               }
             }
@@ -1826,6 +2007,7 @@
         }
 
         if (p.invuln > 0) p.invuln -= dt;
+        if (p.antimatterImmune > 0) p.antimatterImmune = Math.max(0, p.antimatterImmune - dt);
         if (p.gravityCooldown > 0) p.gravityCooldown = Math.max(0, p.gravityCooldown - dt);
         if (p.flareCooldown > 0) p.flareCooldown = Math.max(0, p.flareCooldown - dt);
 
@@ -1839,18 +2021,21 @@
           mag = inputState.moveMag;
         }
 
-        // 백색왜성·중성자별 냉각(환생 유도) 시 소폭 감속 및 질량 성장 완만화
+        // 백색왜성·중성자별 환생 준비 상태 확인 (이동속도 페널티 없음)
         const rebirthInfo = getRebirthTargetInfo(p.stageId, p.mass);
-        const coolingPenalty = rebirthInfo ? 0.92 : 1.0;
+        const coolingPenalty = 1.0;
 
         if (p.reconnectPenaltyTimer > 0) p.reconnectPenaltyTimer = Math.max(0, p.reconnectPenaltyTimer - dt);
         const penaltyMult = p.reconnectPenaltyTimer > 0 ? 0.75 : 1.0;
 
         const canBoost = inputState.boostHeld && saveData.skills.boostUnlocked > 0 && p.mass > 35;
+        p.boosting = canBoost;
         const baseSpeed = Math.max(115, 255 - Math.sqrt(p.mass) * 1.6) * getSpeedMult() * coolingPenalty * penaltyMult;
         const finalSpeed = canBoost ? baseSpeed * 1.58 : baseSpeed;
         if (canBoost) {
-          p.mass = Math.max(30, p.mass - 6.5 * dt);
+          const boostDrain = (6.5 + p.mass * 0.014) * dt;
+          p.mass = Math.max(30, p.mass - boostDrain);
+          checkPlayerDemotion();
         }
 
         p.vx += (dirX * finalSpeed * mag - p.vx) * Math.min(1, dt * 7.5);
@@ -1874,7 +2059,18 @@
             gameState.gravityWaves.splice(i, 1);
             continue;
           }
+          if (gw.isRemoteFx) {
+            const ownerRp = gameState.remotePlayers.get(gw.ownerId);
+            if (ownerRp && ownerRp.alive) {
+              gw.x = ownerRp.x;
+              gw.y = ownerRp.y;
+            }
+            continue;
+          }
+          gw.x = p.x;
+          gw.y = p.y;
           for (const du of gameState.dusts) {
+            if (!isPreProtostar(p.stageId) && isInNewbieZone(du.x, du.y)) continue;
             const d = Math.hypot(p.x - du.x, p.y - du.y);
             if (d > 5 && d < gw.radius) {
               const pull = (320 + (gw.radius - d) * 1.4) * dt;
@@ -1882,10 +2078,12 @@
               du.y += ((p.y - du.y) / d) * pull;
             }
           }
+          const casterInNewbie = isInNewbieZone(p.x, p.y);
           for (const b of gameState.bots) {
+            if (casterInNewbie || isProtectedInNewbieZone(p.stageId, b)) continue;
             const d = Math.hypot(p.x - b.x, p.y - b.y);
             if (d > pR + 10 && d < gw.radius) {
-              const pull = (175 + (gw.radius - d) * 0.65) * dt;
+              const pull = (175 + (gw.radius - d) * 0.65) * getMassResistanceFactor(b.mass) * dt;
               b.x += ((p.x - b.x) / d) * pull;
               b.y += ((p.y - b.y) / d) * pull;
             }
@@ -1895,8 +2093,9 @@
             if (gw.remotePullAccum >= 0.45) {
               gw.remotePullAccum = 0;
               const nowMs = Date.now();
-              gameState.remotePlayers.forEach((rp) => {
+              if (!casterInNewbie) gameState.remotePlayers.forEach((rp) => {
                 if (!rp.alive || nowMs - (rp.updatedAt || 0) > 15000 || (rp.invuln || 0) > 0) return;
+                if (isProtectedInNewbieZone(p.stageId, rp)) return;
                 const d = Math.hypot(p.x - rp.x, p.y - rp.y);
                 if (d > pR + 12 && d < gw.radius) {
                   const pullAng = Math.atan2(p.y - rp.y, p.x - rp.x);
@@ -1908,10 +2107,51 @@
           }
         }
 
-        // 성간 물질 흡수 (기본 중력 범위 반영)
-        const absorbExtra = 26 * getGravityRangeMult();
+        // 블랙홀 전용 패시브 (상시 발동): 주변 성간 물질 및 경쟁 별 지속 인력
+        if (p.stageId === 'black_hole') {
+          const bhRadius = getBlackHoleGravityRadius(p);
+          for (const du of gameState.dusts) {
+            if (isInNewbieZone(du.x, du.y)) continue;
+            const d = Math.hypot(p.x - du.x, p.y - du.y);
+            if (d > 5 && d < bhRadius) {
+              const pull = (165 + (bhRadius - d) * 0.85) * dt;
+              du.x += ((p.x - du.x) / d) * pull;
+              du.y += ((p.y - du.y) / d) * pull;
+            }
+          }
+          for (const b of gameState.bots) {
+            if (isProtectedInNewbieZone(p.stageId, b)) continue;
+            const d = Math.hypot(p.x - b.x, p.y - b.y);
+            if (d > pR + 10 && d < bhRadius) {
+              const pull = (85 + (bhRadius - d) * 0.35) * dt;
+              b.x += ((p.x - b.x) / d) * pull;
+              b.y += ((p.y - b.y) / d) * pull;
+            }
+          }
+          if (gameState.playType === 'MULTI') {
+            p.bhRemotePullAccum = (p.bhRemotePullAccum || 0) + dt;
+            if (p.bhRemotePullAccum >= 0.5) {
+              p.bhRemotePullAccum = 0;
+              const nowMs = Date.now();
+              gameState.remotePlayers.forEach((rp) => {
+                if (!rp.alive || nowMs - (rp.updatedAt || 0) > 15000 || (rp.invuln || 0) > 0) return;
+                if (isProtectedInNewbieZone(p.stageId, rp)) return;
+                const d = Math.hypot(p.x - rp.x, p.y - rp.y);
+                if (d > pR + 12 && d < bhRadius) {
+                  const pullAng = Math.atan2(p.y - rp.y, p.x - rp.x);
+                  const strength = Math.round(55 + (bhRadius - d) * 0.22);
+                  MultiplayerBridge.sendHitToRemote(rp.id, 'gravity_pull', 0, p.name, pullAng, null, { strength, isPassive: true });
+                }
+              });
+            }
+          }
+        }
+
+        // 성간 물질 흡수 (기본 중력 범위 반영 · 블랙홀은 1.5배 / 원시별 이상은 뉴비 공간 내 아이템 흡수 불가)
+        const absorbExtra = 26 * getGravityRangeMult() * (p.stageId === 'black_hole' ? 1.5 : 1.0);
         for (let i = gameState.dusts.length - 1; i >= 0; i--) {
           const du = gameState.dusts[i];
+          if (!isPreProtostar(p.stageId) && isInNewbieZone(du.x, du.y)) continue;
           const d = Math.hypot(du.x - p.x, du.y - p.y);
           if (d < pR + du.r + absorbExtra) {
             if (d > pR + du.r * 0.6) {
@@ -1930,7 +2170,7 @@
                 MultiplayerBridge.respawnSharedDust(du);
               } else {
                 gameState.dusts.splice(i, 1);
-                spawnOneDust();
+                spawnOneDust(du.zone || 'outer');
               }
               SoundFX.eat();
               checkPlayerAutoEvolution();
@@ -1938,8 +2178,24 @@
           }
         }
 
-        // 반물질 스폰 (블랙홀 출현 이후에만 최대 5개 유지)
-        if (gameState.blackHoleAppeared && gameState.antimatters.length < MAX_ANTIMATTER_COUNT) {
+        // 반물질 스폰 (현재 맵에 살아있는 블랙홀이 존재할 때만 최대 5개 유지)
+        let hasActiveBlackHole = p.stageId === 'black_hole';
+        if (!hasActiveBlackHole) {
+          for (const b of gameState.bots) {
+            if (b.stageId === 'black_hole') { hasActiveBlackHole = true; break; }
+          }
+        }
+        if (!hasActiveBlackHole && gameState.playType === 'MULTI') {
+          const nowMsBh = Date.now();
+          for (const rp of gameState.remotePlayers.values()) {
+            if (rp.alive && rp.stageId === 'black_hole' && nowMsBh - (rp.updatedAt || 0) <= 15000) {
+              hasActiveBlackHole = true;
+              break;
+            }
+          }
+        }
+        document.getElementById('minimapBhBadge').classList.toggle('hidden', !hasActiveBlackHole);
+        if (hasActiveBlackHole && gameState.antimatters.length < MAX_ANTIMATTER_COUNT) {
           gameState.antimatterSpawnTimer += dt;
           if (gameState.antimatterSpawnTimer >= ANTIMATTER_RESPAWN_SEC) {
             gameState.antimatterSpawnTimer = 0;
@@ -1951,7 +2207,7 @@
         for (let i = gameState.antimatters.length - 1; i >= 0; i--) {
           const am = gameState.antimatters[i];
           am.pulse += dt * 4;
-          if (p.antimatterAmmo < 1 && Math.hypot(am.x - p.x, am.y - p.y) < pR + am.r + 8) {
+          if (p.stageId !== 'black_hole' && p.antimatterAmmo < 1 && Math.hypot(am.x - p.x, am.y - p.y) < pR + am.r + 8) {
             p.antimatterAmmo = 1;
             gameState.antimatters.splice(i, 1);
             SoundFX.evolve();
@@ -1969,15 +2225,18 @@
             gameState.supernovaProjectiles.splice(i, 1);
             continue;
           }
+          if (pr.isRemoteFx) continue;
           let hitDone = false;
           for (const b of gameState.bots) {
+            if (isProtectedInNewbieZone(p.stageId, b)) continue;
             if (Math.hypot(pr.x - b.x, pr.y - b.y) < getEntityRadius(b) + pr.r) {
-              const dmg = Math.max(40, b.mass * 0.22);
+              const dmg = Math.min(Math.max(35, b.mass * 0.15), Math.max(60, p.mass * 1.6));
               b.mass = Math.max(30, b.mass - dmg);
               b.stageId = stageForBotMass(b.mass, b.preferMassive);
               const kbAng = pr.angle !== undefined ? pr.angle : Math.atan2(pr.vy, pr.vx);
-              b.vx += Math.cos(kbAng) * 95;
-              b.vy += Math.sin(kbAng) * 95;
+              const bRes = getMassResistanceFactor(b.mass);
+              b.vx += Math.cos(kbAng) * (95 * bRes);
+              b.vy += Math.sin(kbAng) * (95 * bRes);
               addFloatingText(b.x, b.y, `🔥 -${Math.floor(dmg)}`, '#fb923c');
               SoundFX.hit();
               gameState.supernovaProjectiles.splice(i, 1);
@@ -1989,8 +2248,9 @@
             const nowMs = Date.now();
             for (const rp of gameState.remotePlayers.values()) {
               if (!rp.alive || nowMs - (rp.updatedAt || 0) > 15000 || (rp.invuln || 0) > 0) continue;
+              if (isProtectedInNewbieZone(p.stageId, rp)) continue;
               if (Math.hypot(pr.x - rp.x, pr.y - rp.y) < getEntityRadius(rp) + pr.r) {
-                const dmg = Math.max(40, rp.mass * 0.22);
+                const dmg = Math.min(Math.max(35, rp.mass * 0.15), Math.max(60, p.mass * 1.6));
                 const kbAng = pr.angle !== undefined ? pr.angle : Math.atan2(pr.vy, pr.vx);
                 MultiplayerBridge.sendHitToRemote(rp.id, 'flare', dmg, p.name, kbAng);
                 addFloatingText(rp.x, rp.y, `🔥 -${Math.floor(dmg)}`, '#fb923c');
@@ -2012,20 +2272,24 @@
             gameState.antimatterProjectiles.splice(i, 1);
             continue;
           }
+          if (pr.isRemoteFx) continue;
           let hitDone = false;
           for (let bi = 0; bi < gameState.bots.length; bi++) {
             const b = gameState.bots[bi];
+            if (b.stageId !== 'black_hole') continue;
             if (Math.hypot(pr.x - b.x, pr.y - b.y) < getEntityRadius(b) + pr.r) {
-              const isBh = b.stageId === 'black_hole';
-              const dmg = isBh ? b.mass * 0.52 : b.mass * 0.3;
+              if ((b.antimatterImmune || 0) > 0) {
+                addFloatingText(b.x, b.y - 16, '🛡️ 반물질 면역!', '#e9d5ff');
+                gameState.antimatterProjectiles.splice(i, 1);
+                hitDone = true;
+                break;
+              }
+              const dmg = b.mass * 0.24;
               b.mass = Math.max(40, b.mass - dmg);
+              b.antimatterImmune = ANTIMATTER_IMMUNE_SEC;
               b.stageId = stageForBotMass(b.mass, b.preferMassive);
               SoundFX.hit();
-              if (isBh) {
-                showEventBanner('💥 반물질 명중!', `[${b.name}] 블랙홀이 반물질과 쌍소멸하며 질량이 대폭 감소했습니다!`, 'amber');
-              } else {
-                addFloatingText(b.x, b.y, `⚛️ -${Math.floor(dmg)}`, '#e879f9');
-              }
+              showEventBanner('💥 반물질 명중!', `[${b.name}] 블랙홀의 질량이 24% 감소했습니다! (3초간 반물질 면역)`, 'amber');
               gameState.antimatterProjectiles.splice(i, 1);
               hitDone = true;
               break;
@@ -2034,17 +2298,17 @@
           if (!hitDone && gameState.playType === 'MULTI') {
             const nowMs = Date.now();
             for (const rp of gameState.remotePlayers.values()) {
-              if (!rp.alive || nowMs - (rp.updatedAt || 0) > 15000 || (rp.invuln || 0) > 0) continue;
+              if (!rp.alive || rp.stageId !== 'black_hole' || nowMs - (rp.updatedAt || 0) > 15000 || (rp.invuln || 0) > 0) continue;
               if (Math.hypot(pr.x - rp.x, pr.y - rp.y) < getEntityRadius(rp) + pr.r) {
-                const isBh = rp.stageId === 'black_hole';
-                const dmg = isBh ? rp.mass * 0.52 : rp.mass * 0.3;
+                if ((rp.antimatterImmune || 0) > 0) {
+                  addFloatingText(rp.x, rp.y - 16, '🛡️ 반물질 면역!', '#e9d5ff');
+                  gameState.antimatterProjectiles.splice(i, 1);
+                  break;
+                }
+                const dmg = rp.mass * 0.24;
                 MultiplayerBridge.sendHitToRemote(rp.id, 'antimatter', dmg, p.name);
                 SoundFX.hit();
-                if (isBh) {
-                  showEventBanner('💥 반물질 명중!', `[${rp.name}] 블랙홀이 반물질과 쌍소멸하며 질량이 대폭 감소했습니다!`, 'amber');
-                } else {
-                  addFloatingText(rp.x, rp.y, `⚛️ -${Math.floor(dmg)}`, '#e879f9');
-                }
+                showEventBanner('💥 반물질 명중!', `[${rp.name}] 블랙홀의 질량이 24% 감소했습니다! (3초간 반물질 면역)`, 'amber');
                 gameState.antimatterProjectiles.splice(i, 1);
                 break;
               }
@@ -2059,13 +2323,14 @@
           const bR = getEntityRadius(b);
           const dist = Math.hypot(p.x - b.x, p.y - b.y);
           if (dist < pR + bR - Math.min(pR, bR) * 0.35) {
-            if (b.mass > p.mass * 1.12 && p.invuln <= 0) {
+            if (b.mass > p.mass * 1.12 && p.invuln <= 0 && !isProtectedInNewbieZone(b.stageId, p)) {
               const killerStage = getDisplayStageName(b.stageId);
               endPlayerRun(`[${b.name}] (${killerStage})의 강한 중력에 흡수되었습니다.`);
               return;
-            } else if (p.mass > b.mass * 1.12 && b.invuln <= 0) {
-              const gain = b.mass * 0.35 * getFusionMult();
+            } else if (p.mass > b.mass * 1.12 && b.invuln <= 0 && !isProtectedInNewbieZone(p.stageId, b)) {
+              const gain = b.mass * 0.25 * getFusionMult();
               p.mass += gain;
+              if (p.invuln > 0) p.invuln = 0;
               addFloatingText(b.x, b.y, `+${Math.floor(gain)} 흡수!`, '#34d399');
               SoundFX.eat();
               gameState.bots[i] = spawnBot(i);
@@ -2084,15 +2349,16 @@
             const rpR = getEntityRadius(rp);
             const distR = Math.hypot(p.x - rp.x, p.y - rp.y);
             if (distR < pR + rpR - Math.min(pR, rpR) * 0.35) {
-              if (rp.mass > p.mass * 1.12 && p.invuln <= 0) {
+              if (rp.mass > p.mass * 1.12 && p.invuln <= 0 && !isProtectedInNewbieZone(rp.stageId, p)) {
                 const killerStage = getDisplayStageName(rp.stageId);
                 endPlayerRun(`👤 [${rp.name}] (${killerStage})의 강한 중력에 흡수되었습니다.`);
                 return;
-              } else if (p.mass > rp.mass * 1.12 && (rp.invuln || 0) <= 0 && !rp.justEatenByMe) {
+              } else if (p.mass > rp.mass * 1.12 && (rp.invuln || 0) <= 0 && !rp.justEatenByMe && !isProtectedInNewbieZone(p.stageId, rp)) {
                 rp.justEatenByMe = true;
                 setTimeout(() => { rp.justEatenByMe = false; }, 2500);
-                const gain = rp.mass * 0.35 * getFusionMult();
+                const gain = rp.mass * 0.25 * getFusionMult();
                 p.mass += gain;
+                if (p.invuln > 0) p.invuln = 0;
                 MultiplayerBridge.sendHitToRemote(rp.id, 'eaten', 0, p.name, null, p.stageId);
                 addFloatingText(rp.x, rp.y, `+${Math.floor(gain)} 흡수!`, '#34d399');
                 SoundFX.eat();
@@ -2117,7 +2383,7 @@
         }
 
         // 카메라 추적
-        const targetZoom = Math.max(0.52, Math.min(1.12, 1.15 - pR * 0.0052));
+        const targetZoom = Math.max(0.52, Math.min(0.92, 0.98 - pR * 0.0042));
         gameState.camera.x += (p.x - gameState.camera.x) * Math.min(1, dt * 8);
         gameState.camera.y += (p.y - gameState.camera.y) * Math.min(1, dt * 8);
         gameState.camera.zoom += (targetZoom - gameState.camera.zoom) * Math.min(1, dt * 4);
@@ -2134,6 +2400,26 @@
 
         if (ent.invuln > 0) {
           ctx.globalAlpha = 0.65 + Math.sin(t * 8) * 0.25;
+        }
+
+        if (ent.boosting) {
+          ctx.save();
+          const bPulse = 1 + Math.sin(t * 14) * 0.12;
+          const bGrad = ctx.createRadialGradient(0, 0, r * 0.8, 0, 0, r * 1.75 * bPulse);
+          bGrad.addColorStop(0, 'rgba(34, 211, 238, 0.55)');
+          bGrad.addColorStop(0.6, 'rgba(14, 165, 233, 0.22)');
+          bGrad.addColorStop(1, 'rgba(14, 165, 233, 0)');
+          ctx.fillStyle = bGrad;
+          ctx.beginPath();
+          ctx.arc(0, 0, r * 1.75 * bPulse, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(103, 232, 249, 0.85)';
+          ctx.lineWidth = 2.5;
+          ctx.setLineDash([6, 5]);
+          ctx.beginPath();
+          ctx.arc(0, 0, r + 7, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
         }
 
         if (ent.stageId === 'dust') {
@@ -2171,6 +2457,32 @@
           ctx.arc(0, 0, r * 0.65, 0, Math.PI * 2);
           ctx.fill();
         } else if (ent.stageId === 'black_hole') {
+          // 블랙홀 전용 상시 중력장 시각화 (반물질 사거리보다 짧게 표시)
+          const bhGravR = getBlackHoleGravityRadius(ent);
+          ctx.save();
+          const gField = ctx.createRadialGradient(0, 0, r * 0.9, 0, 0, bhGravR);
+          gField.addColorStop(0, 'rgba(147, 51, 234, 0.16)');
+          gField.addColorStop(0.7, 'rgba(126, 34, 206, 0.07)');
+          gField.addColorStop(1, 'rgba(147, 51, 234, 0)');
+          ctx.fillStyle = gField;
+          ctx.beginPath();
+          ctx.arc(0, 0, bhGravR, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(192, 132, 252, 0.36)';
+          ctx.lineWidth = 2;
+          ctx.setLineDash([10, 8]);
+          ctx.beginPath();
+          ctx.arc(0, 0, bhGravR, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.setLineDash([]);
+          const pullRingR = r + (bhGravR - r) * (1 - ((t * 0.55) % 1));
+          ctx.strokeStyle = 'rgba(216, 180, 254, 0.28)';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.arc(0, 0, pullRingR, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+
           const halo = ctx.createRadialGradient(0, 0, r * 0.7, 0, 0, r * 1.65);
           halo.addColorStop(0, 'rgba(168, 85, 247, 0.85)');
           halo.addColorStop(0.45, 'rgba(249, 115, 22, 0.45)');
@@ -2222,6 +2534,16 @@
           ctx.beginPath();
           ctx.arc(0, 0, r, 0, Math.PI * 2);
           ctx.fill();
+        }
+
+        if ((ent.antimatterImmune || 0) > 0) {
+          ctx.save();
+          ctx.strokeStyle = 'rgba(240, 171, 252, 0.9)';
+          ctx.lineWidth = 3.5;
+          ctx.beginPath();
+          ctx.arc(0, 0, r + 11, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
         }
 
         // 이름 & 단계 라벨 (미해금 천체는 ???)
@@ -2332,6 +2654,29 @@
         ctx.stroke();
         ctx.restore();
 
+        // 6-2) 중앙 뉴비 성장 구역 (성간 물질 ~ 성운 보호 구역)
+        ctx.save();
+        const nzGrad = ctx.createRadialGradient(0, 0, 40, 0, 0, NEWBIE_ZONE_RADIUS);
+        nzGrad.addColorStop(0, 'rgba(16, 185, 129, 0.08)');
+        nzGrad.addColorStop(0.75, 'rgba(6, 182, 212, 0.05)');
+        nzGrad.addColorStop(1, 'rgba(16, 185, 129, 0.14)');
+        ctx.fillStyle = nzGrad;
+        ctx.beginPath();
+        ctx.arc(0, 0, NEWBIE_ZONE_RADIUS, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(52, 211, 153, 0.45)';
+        ctx.lineWidth = 3;
+        ctx.setLineDash([14, 10]);
+        ctx.beginPath();
+        ctx.arc(0, 0, NEWBIE_ZONE_RADIUS, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.font = '700 13px "Noto Sans KR", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = 'rgba(110, 231, 183, 0.72)';
+        ctx.fillText('🛡️ 뉴비 성장 구역 (성운 이하 보호)', 0, -NEWBIE_ZONE_RADIUS + 26);
+        ctx.restore();
+
         // 성간 물질 (단순 원 형태)
         for (const du of gameState.dusts) {
           ctx.fillStyle = du.color;
@@ -2362,24 +2707,25 @@
           ctx.restore();
         }
 
-        // 중력장(E) 수축 링 이펙트
-        if (gameState.player && (gameState.mode === 'PLAYING' || gameState.mode === 'PAUSED')) {
+        // 중력장(E) 수축 링 이펙트 (본인 + 멀티플레이 원격 플레이어)
+        if (gameState.gravityWaves.length > 0) {
           for (const gw of gameState.gravityWaves) {
-            const p = gameState.player;
+            const gx = gw.isRemoteFx ? gw.x : (gameState.player ? gameState.player.x : gw.x);
+            const gy = gw.isRemoteFx ? gw.y : (gameState.player ? gameState.player.y : gw.y);
             const prog = 1 - gw.duration / gw.maxDuration;
             ctx.save();
             ctx.strokeStyle = `rgba(96, 165, 250, ${0.75 * (1 - prog * 0.5)})`;
             ctx.lineWidth = 3;
             ctx.setLineDash([12, 8]);
             ctx.beginPath();
-            ctx.arc(p.x, p.y, gw.radius, 0, Math.PI * 2);
+            ctx.arc(gx, gy, gw.radius, 0, Math.PI * 2);
             ctx.stroke();
             ctx.setLineDash([]);
             const innerR = gw.radius * (1 - ((prog * 3) % 1));
             ctx.strokeStyle = 'rgba(147, 197, 253, 0.5)';
             ctx.lineWidth = 2;
             ctx.beginPath();
-            ctx.arc(p.x, p.y, innerR, 0, Math.PI * 2);
+            ctx.arc(gx, gy, innerR, 0, Math.PI * 2);
             ctx.stroke();
             ctx.restore();
           }
@@ -2406,7 +2752,7 @@
             ctx.setLineDash([10, 8]);
             ctx.beginPath();
             ctx.moveTo(p.x, p.y);
-            ctx.lineTo(p.x + Math.cos(inputState.antiAngle) * AIM_RANGE, p.y + Math.sin(inputState.antiAngle) * AIM_RANGE);
+            ctx.lineTo(p.x + Math.cos(inputState.antiAngle) * ANTIMATTER_AIM_RANGE, p.y + Math.sin(inputState.antiAngle) * ANTIMATTER_AIM_RANGE);
             ctx.stroke();
             ctx.restore();
           }
@@ -2512,6 +2858,14 @@
         minimapCtx.arc(cx, cy, w * 0.45, 0, Math.PI * 2);
         minimapCtx.stroke();
 
+        minimapCtx.fillStyle = 'rgba(16, 185, 129, 0.14)';
+        minimapCtx.strokeStyle = 'rgba(52, 211, 153, 0.5)';
+        minimapCtx.lineWidth = 1;
+        minimapCtx.beginPath();
+        minimapCtx.arc(cx, cy, NEWBIE_ZONE_RADIUS * scale, 0, Math.PI * 2);
+        minimapCtx.fill();
+        minimapCtx.stroke();
+
         for (const b of gameState.bots) {
           minimapCtx.fillStyle = b.stageId === 'black_hole' ? '#c084fc' : 'rgba(148, 163, 184, 0.75)';
           minimapCtx.beginPath();
@@ -2523,9 +2877,10 @@
           const nowMs = Date.now();
           gameState.remotePlayers.forEach((rp) => {
             if (!rp.alive || nowMs - (rp.updatedAt || 0) > 15000) return;
-            minimapCtx.fillStyle = '#fbbf24';
+            const isBh = rp.stageId === 'black_hole';
+            minimapCtx.fillStyle = isBh ? '#c084fc' : '#fbbf24';
             minimapCtx.beginPath();
-            minimapCtx.arc(cx + rp.x * scale, cy + rp.y * scale, 3.2, 0, Math.PI * 2);
+            minimapCtx.arc(cx + rp.x * scale, cy + rp.y * scale, isBh ? 4.4 : 3.2, 0, Math.PI * 2);
             minimapCtx.fill();
           });
         }
@@ -2592,7 +2947,7 @@
         }
 
         // 스킬 쿨타임 & 반물질 보유량
-        document.getElementById('gravityCdText').textContent = p.gravityCooldown > 0 ? `${p.gravityCooldown.toFixed(1)}s` : 'READY';
+        document.getElementById('gravityCdText').textContent = p.stageId === 'black_hole' ? '상시' : (p.gravityCooldown > 0 ? `${p.gravityCooldown.toFixed(1)}s` : 'READY');
         document.getElementById('flareCdText').textContent = p.flareCooldown > 0 ? `${p.flareCooldown.toFixed(1)}s` : 'READY';
         document.getElementById('antiAmmoText').textContent = `${p.antimatterAmmo}/1`;
 
@@ -3211,6 +3566,11 @@
           setTimeout(() => shortInput.focus(), 60);
         }
 
+        const closeQuizBtn = document.getElementById('btnCloseQuiz');
+        if (closeQuizBtn) {
+          const hideClose = ctxInfo.kind === 'entry_gate' && gameState.pendingPlayType === 'MULTI';
+          closeQuizBtn.classList.toggle('hidden', hideClose);
+        }
         document.getElementById('quizModal').classList.remove('hidden');
       }
 
@@ -3324,7 +3684,11 @@
               startQuizChallenge({ kind: 'entry_gate' });
             } else if (autoContinueBasic === 'entry_gate_done') {
               document.getElementById('quizModal').classList.add('hidden');
-              startNewMatch(gameState.pendingPlayType || 'SINGLE');
+              if (gameState.pendingPlayType === 'MULTI' && MultiplayerBridge.lastStatus === 'ENDED') {
+                endPlayerRun('⏹️ 이미 종료된 경기입니다.', true);
+              } else {
+                startNewMatch(gameState.pendingPlayType || 'SINGLE');
+              }
             } else if (autoContinueBasic === 'stat_protostar') {
               startQuizChallenge({ kind: 'stat_protostar' });
             } else {
@@ -3454,19 +3818,15 @@
           const manualUploads = this.catalog.filter((c) => c.id.startsWith('upload_'));
 
           try {
-            const apiPath = ghInfo.dirPath
-              ? `/${ghInfo.dirPath.split('/').map(encodeURIComponent).join('/')}`
-              : '';
-            const apiUrl = `https://api.github.com/repos/${encodeURIComponent(ghInfo.owner)}/${encodeURIComponent(ghInfo.repo)}/contents${apiPath}`;
+            const apiUrl = `https://api.github.com/repos/${encodeURIComponent(ghInfo.owner)}/${encodeURIComponent(ghInfo.repo)}/contents/quiz`;
             const res = await fetch(apiUrl, { headers: { Accept: 'application/vnd.github.v3+json' } });
 
-            // User 사이트인데 하위 폴더가 repo가 아니라 디렉터리인 경우 재시도
+            // User 사이트(owner.github.io)인데 하위 폴더가 repo로 파싱된 경우 루트 quiz 폴더로 재시도
             let filesJson = null;
             if (res.ok) {
               filesJson = await res.json();
             } else if (ghInfo.repo !== `${ghInfo.owner}.github.io`) {
-              const fallbackPath = [ghInfo.repo, ghInfo.dirPath].filter(Boolean).map(encodeURIComponent).join('/');
-              const fallbackUrl = `https://api.github.com/repos/${encodeURIComponent(ghInfo.owner)}/${encodeURIComponent(ghInfo.owner + '.github.io')}/contents/${fallbackPath}`;
+              const fallbackUrl = `https://api.github.com/repos/${encodeURIComponent(ghInfo.owner)}/${encodeURIComponent(ghInfo.owner + '.github.io')}/contents/quiz`;
               const fbRes = await fetch(fallbackUrl, { headers: { Accept: 'application/vnd.github.v3+json' } });
               if (fbRes.ok) filesJson = await fbRes.json();
             }
@@ -3481,7 +3841,7 @@
             );
 
             if (jsFiles.length === 0) {
-              this.setScanStatus('같은 폴더에서 .js 퀴즈 파일을 찾지 못했습니다. 퀴즈 .js 파일을 같은 폴더에 업로드해 주세요.', 'warn');
+              this.setScanStatus('quiz 폴더에서 .js 퀴즈 파일을 찾지 못했습니다. 퀴즈 .js 파일을 quiz 폴더에 업로드해 주세요.', 'warn');
               this.catalog = [...manualUploads];
               this.renderList();
               return 0;
@@ -3497,7 +3857,7 @@
             }));
 
             this.catalog = [...discovered, ...manualUploads];
-            this.setScanStatus(`✅ 같은 폴더에서 ${discovered.length}개의 퀴즈 파일을 자동으로 찾았습니다!`, 'success');
+            this.setScanStatus(`✅ quiz 폴더에서 ${discovered.length}개의 퀴즈 파일을 자동으로 찾았습니다!`, 'success');
             this.renderList();
 
             // 각 .js 파일 내용을 백그라운드로 불러와 문제 개수(필수/하/중/상) 미리 표시 및 유효성 검증
@@ -3521,7 +3881,7 @@
             }
 
             const validGhCount = this.catalog.filter((c) => c.id.startsWith('gh_')).length;
-            this.setScanStatus(`✅ 같은 폴더에서 ${validGhCount}개의 퀴즈 파일을 자동으로 불러왔습니다!`, 'success');
+            this.setScanStatus(`✅ quiz 폴더에서 ${validGhCount}개의 퀴즈 파일을 자동으로 불러왔습니다!`, 'success');
             this.renderList();
             return validGhCount;
           } catch (err) {
@@ -3548,7 +3908,7 @@
           // 1) 같은 폴더 상대 경로 fetch
           if (item.file) {
             try {
-              const parsed = await tryFetchParse(encodeURIComponent(item.file));
+              const parsed = await tryFetchParse(`../quiz/${encodeURIComponent(item.file)}`);
               if (parsed) {
                 item.data = parsed;
                 return item.data;
@@ -3573,7 +3933,7 @@
               await new Promise((resolve) => {
                 window.quizData = undefined;
                 const sc = document.createElement('script');
-                sc.src = item.file;
+                sc.src = `../quiz/${item.file}`;
                 sc.onload = () => {
                   if (window.quizData) item.data = JSON.parse(JSON.stringify(window.quizData));
                   sc.remove();
@@ -3710,7 +4070,6 @@
       const MultiplayerBridge = {
         roomCode: null,
         role: null,
-        roomIncludeBots: true,
         myId: 'p_' + Math.random().toString(36).slice(2, 10),
         myNickKey: null,
         nickToKey(name) {
@@ -3732,6 +4091,7 @@
         dustChangedListener: null,
         dustRemovedListener: null,
         hitsListener: null,
+        fxListener: null,
         roomPlayersMap: new Map(),
         uiRenderTimer: null,
         teacherTimerInterval: null,
@@ -3754,7 +4114,7 @@
         buildInitialSharedDusts(pal) {
           const obj = {};
           for (let i = 0; i < MAX_DUST_COUNT; i++) {
-            obj['d_' + i] = createRandomDustPayload(pal);
+            obj['d_' + i] = createRandomDustPayload(pal, i < NEWBIE_DUST_COUNT ? 'newbie' : 'outer');
           }
           return obj;
         },
@@ -3809,7 +4169,9 @@
 
         respawnSharedDust(du) {
           if (!this.roomRef || !du || !du.id) return;
-          const next = createRandomDustPayload(gameState.dustPalette);
+          const idxNum = parseInt(String(du.id).replace('d_', ''), 10);
+          const zone = (!isNaN(idxNum) && idxNum < NEWBIE_DUST_COUNT) ? 'newbie' : 'outer';
+          const next = createRandomDustPayload(gameState.dustPalette, zone);
           // 로컬 즉시 이동 (중복 획득 방지 및 즉각 반응성 확보)
           du.x = next.x;
           du.y = next.y;
@@ -3834,6 +4196,71 @@
           this.roomRef.child('hits/' + targetId).push(payload).catch(() => {});
         },
 
+        broadcastSkillFx(fxType, data = {}) {
+          if (!this.roomRef || this.role !== 'STUDENT') return;
+          const fxRef = this.roomRef.child('fx').push();
+          fxRef.set({
+            ownerId: this.myId,
+            type: fxType,
+            x: Math.round(data.x || 0),
+            y: Math.round(data.y || 0),
+            angle: typeof data.angle === 'number' ? Number(data.angle.toFixed(3)) : 0,
+            radius: Math.round(data.radius || 0),
+            ts: Date.now()
+          }).catch(() => {});
+          setTimeout(() => { fxRef.remove().catch(() => {}); }, 3500);
+        },
+
+        attachSkillFxListener() {
+          if (!this.roomRef) return;
+          const fxRef = this.roomRef.child('fx');
+          if (this.fxListener) fxRef.off('child_added', this.fxListener);
+          this.fxListener = (snap) => {
+            const fx = snap.val();
+            if (!fx || fx.ownerId === this.myId) return;
+            if (Date.now() - (fx.ts || 0) > 3000) return;
+            if (fx.type === 'gravity') {
+              gameState.gravityWaves.push({
+                ownerId: fx.ownerId,
+                isRemoteFx: true,
+                x: Number(fx.x) || 0,
+                y: Number(fx.y) || 0,
+                duration: 2.2,
+                maxDuration: 2.2,
+                radius: Number(fx.radius) || 240
+              });
+            } else if (fx.type === 'flare') {
+              const speed = 640;
+              const ang = Number(fx.angle) || 0;
+              gameState.supernovaProjectiles.push({
+                x: Number(fx.x) || 0,
+                y: Number(fx.y) || 0,
+                vx: Math.cos(ang) * speed,
+                vy: Math.sin(ang) * speed,
+                angle: ang,
+                life: 0.95,
+                ownerId: fx.ownerId,
+                isRemoteFx: true,
+                r: 13
+              });
+            } else if (fx.type === 'antimatter') {
+              const speed = ANTIMATTER_SPEED;
+              const ang = Number(fx.angle) || 0;
+              gameState.antimatterProjectiles.push({
+                x: Number(fx.x) || 0,
+                y: Number(fx.y) || 0,
+                vx: Math.cos(ang) * speed,
+                vy: Math.sin(ang) * speed,
+                life: ANTIMATTER_LIFE,
+                ownerId: fx.ownerId,
+                isRemoteFx: true,
+                r: 15
+              });
+            }
+          };
+          fxRef.on('child_added', this.fxListener);
+        },
+
         async createTeacherRoom() {
           if (!fbDb) {
             showToast('Firebase 서버에 연결할 수 없습니다. 인터넷 연결을 확인하세요.', 'warn');
@@ -3850,7 +4277,6 @@
           this.roomCode = code;
           this.role = 'TEACHER';
           this.roomDuration = TeacherQuizManager.selectedDuration || 900;
-          this.roomIncludeBots = !!document.getElementById('chkTeacherBots').checked;
 
           const paletteIdx = Math.floor(Math.random() * DUST_PALETTES.length);
           gameState.dustPalette = DUST_PALETTES[paletteIdx];
@@ -3864,7 +4290,6 @@
                 createdAt: Date.now(),
                 startedAt: null,
                 duration: this.roomDuration,
-                includeBots: this.roomIncludeBots,
                 paletteIdx,
                 quizTitles: titles
               },
@@ -3893,6 +4318,7 @@
 
           this.attachTeacherListeners();
           this.attachSharedDustListeners();
+          this.attachSkillFxListener();
           showToast(`✨ 수업 방 [${code}]이 생성되었습니다! 학생들에게 QR코드를 보여주세요.`, 'success');
         },
 
@@ -3977,6 +4403,7 @@
               existing.mass = pl.mass || 30;
               existing.stageId = pl.stageId || 'dust';
               existing.alive = !!pl.alive;
+              existing.boosting = !!pl.boosting;
               existing.updatedAt = pl.updatedAt || Date.now();
             } else {
               gameState.remotePlayers.set(id, {
@@ -3991,6 +4418,7 @@
                 mass: pl.mass || 30,
                 stageId: pl.stageId || 'dust',
                 alive: !!pl.alive,
+                boosting: !!pl.boosting,
                 updatedAt: pl.updatedAt || Date.now()
               });
             }
@@ -4173,6 +4601,19 @@
             return;
           }
 
+          // 현재 방에 접속 중인 다른 플레이어와 중복 닉네임 방지
+          const targetNickKey = this.nickToKey(myName);
+          const activePlayers = roomVal.players ? Object.values(roomVal.players) : [];
+          const isDupNick = activePlayers.some((pl) => {
+            if (!pl || pl.id === this.myId) return false;
+            return this.nickToKey(pl.name) === targetNickKey;
+          });
+          if (isDupNick) {
+            showToast(`⚠️ [${myName}]은(는) 이미 다른 플레이어가 사용 중인 닉네임입니다. 다른 닉네임을 입력해 주세요!`, 'warn');
+            if (nameEl) nameEl.focus();
+            return;
+          }
+
           this.leave();
           this.roomCode = code;
           this.role = 'STUDENT';
@@ -4210,12 +4651,12 @@
               updatedAt: Date.now()
             }).catch(() => {});
           }
-          this.roomIncludeBots = roomVal.meta.includeBots !== false;
           this.roomDuration = roomVal.meta.duration || 900;
           this.lastStatus = null;
           const pIdx = typeof roomVal.meta.paletteIdx === 'number' ? roomVal.meta.paletteIdx : 0;
           gameState.dustPalette = DUST_PALETTES[pIdx % DUST_PALETTES.length];
           this.attachSharedDustListeners();
+          this.attachSkillFxListener();
 
           if (roomVal.quizData) {
             const qTitles = Array.isArray(roomVal.meta.quizTitles) ? roomVal.meta.quizTitles : ['교사 지정 문제집'];
@@ -4236,31 +4677,45 @@
             const p = gameState.player;
             if (p.invuln > 0) return;
             if (hit.type === 'eaten') {
+              if (hit.stageId && isProtectedInNewbieZone(hit.stageId, p)) return;
               const killerStage = hit.stageId ? getDisplayStageName(hit.stageId) : '거대한 별';
               endPlayerRun(`👤 [${hit.from}] (${killerStage})의 강한 중력에 흡수되었습니다.`);
               return;
             }
             if (hit.type === 'gravity_pull') {
               if (typeof hit.angle === 'number') {
-                const str = Math.max(60, Math.min(220, Number(hit.strength) || 110));
+                const res = getMassResistanceFactor(p.mass);
+                const str = Math.max(40, Math.min(220, Number(hit.strength) || 110)) * res;
                 p.vx += Math.cos(hit.angle) * str;
                 p.vy += Math.sin(hit.angle) * str;
-                addFloatingText(p.x, p.y - 20, `🌀 [${hit.from}] 중력 인력!`, '#60a5fa');
+                if (!hit.isPassive) {
+                  addFloatingText(p.x, p.y - 20, `🌀 [${hit.from}] 중력 인력!`, '#60a5fa');
+                }
               }
+              return;
+            }
+            if (hit.type === 'antimatter' && p.stageId !== 'black_hole') {
+              return;
+            }
+            if (hit.type === 'antimatter' && p.antimatterImmune > 0) {
+              addFloatingText(p.x, p.y - 20, '🛡️ 반물질 면역!', '#e9d5ff');
               return;
             }
             const dmg = Math.max(20, Number(hit.dmg) || 40);
             p.mass = Math.max(30, p.mass - dmg);
+            checkPlayerDemotion();
             SoundFX.hit();
             if (hit.type === 'antimatter') {
+              p.antimatterImmune = ANTIMATTER_IMMUNE_SEC;
               addFloatingText(p.x, p.y - 20, `⚛️ [${hit.from}] 피격 -${Math.floor(dmg)}`, '#e879f9');
-              showToast(`⚛️ [${hit.from}]의 반물질에 맞아 질량이 ${Math.floor(dmg)} 감소했습니다!`, 'warn');
+              showToast(`⚛️ [${hit.from}]의 반물질에 맞아 질량이 ${Math.floor(dmg)} 감소했습니다! (3초간 반물질 면역)`, 'warn');
             } else {
               if (typeof hit.angle === 'number') {
-                p.vx += Math.cos(hit.angle) * 110;
-                p.vy += Math.sin(hit.angle) * 110;
-                p.x += Math.cos(hit.angle) * 8;
-                p.y += Math.sin(hit.angle) * 8;
+                const res = getMassResistanceFactor(p.mass);
+                p.vx += Math.cos(hit.angle) * (110 * res);
+                p.vy += Math.sin(hit.angle) * (110 * res);
+                p.x += Math.cos(hit.angle) * (8 * res);
+                p.y += Math.sin(hit.angle) * (8 * res);
               }
               addFloatingText(p.x, p.y - 20, `🔥 [${hit.from}] 피격 -${Math.floor(dmg)}`, '#fb923c');
             }
@@ -4318,7 +4773,9 @@
               existing.mass = pl.mass || 30;
               existing.stageId = pl.stageId || 'dust';
               existing.alive = !!pl.alive;
+              existing.boosting = !!pl.boosting;
               existing.invuln = pl.invuln || 0;
+              existing.antimatterImmune = pl.antimatterImmune || 0;
               existing.updatedAt = pl.updatedAt || Date.now();
             } else {
               gameState.remotePlayers.set(id, {
@@ -4333,7 +4790,9 @@
                 mass: pl.mass || 30,
                 stageId: pl.stageId || 'dust',
                 alive: !!pl.alive,
+                boosting: !!pl.boosting,
                 invuln: pl.invuln || 0,
+                antimatterImmune: pl.antimatterImmune || 0,
                 updatedAt: pl.updatedAt || Date.now()
               });
             }
@@ -4359,7 +4818,6 @@
           this.metaListener = (mSnap) => {
             const meta = mSnap.val();
             if (!meta) return;
-            this.roomIncludeBots = meta.includeBots !== false;
             this.roomDuration = meta.duration || 900;
             this.roomStartedAt = meta.startedAt || null;
             const prevStatus = this.lastStatus;
@@ -4375,7 +4833,7 @@
               gameState.matchDurationSec = Math.max(10, remain);
               if (gameState.mode !== 'PLAYING') startNewMatch('MULTI');
             } else if (meta.status === 'ENDED' && prevStatus === 'PLAYING') {
-              if (gameState.mode === 'PLAYING' || gameState.mode === 'PAUSED' || gameState.mode === 'RUN_OVER') {
+              if (gameState.mode === 'PLAYING' || gameState.mode === 'PAUSED' || gameState.mode === 'RUN_OVER' || gameState.mode === 'ENTRY_GATE') {
                 endPlayerRun('🔔 선생님이 수업을 종료했습니다! 오늘 우주 탐험 수고하셨습니다.', true);
               }
             }
@@ -4392,9 +4850,11 @@
             y: Math.round(p.y),
             mass: Math.round(p.mass),
             stageId: p.stageId,
+            boosting: !!p.boosting,
             alive: !!isAlive,
             quizSolved: saveData.quizSolvedTotal || 0,
             invuln: Number((p.invuln || 0).toFixed(1)),
+            antimatterImmune: Number((p.antimatterImmune || 0).toFixed(1)),
             updatedAt: Date.now()
           }).catch(() => {});
         },
@@ -4417,6 +4877,7 @@
             if (this.dustChangedListener) this.roomRef.child('dusts').off('child_changed', this.dustChangedListener);
             if (this.dustRemovedListener) this.roomRef.child('dusts').off('child_removed', this.dustRemovedListener);
             if (this.hitsListener) this.roomRef.child('hits/' + this.myId).off('child_added', this.hitsListener);
+            if (this.fxListener) this.roomRef.child('fx').off('child_added', this.fxListener);
             if (this.role === 'STUDENT') {
               this.roomRef.child('players/' + this.myId).remove().catch(() => {});
               this.roomRef.child('hits/' + this.myId).remove().catch(() => {});
@@ -4431,6 +4892,7 @@
           this.dustChangedListener = null;
           this.dustRemovedListener = null;
           this.hitsListener = null;
+          this.fxListener = null;
           this.roomStartedAt = null;
           this.roomPlayersMap.clear();
           gameState.dustMap.clear();
@@ -4972,14 +5434,11 @@
 
       // 퀴즈 닫기 & 주관식 제출
       document.getElementById('btnCloseQuiz').onclick = () => {
+        if (gameState.mode === 'ENTRY_GATE' && gameState.pendingPlayType === 'MULTI') return;
         document.getElementById('quizModal').classList.add('hidden');
         if (gameState.mode === 'ENTRY_GATE') {
           gameState.mode = 'LOBBY';
-          if (gameState.pendingPlayType === 'MULTI') {
-            document.getElementById('multiModal').classList.remove('hidden');
-          } else {
-            document.getElementById('lobbyModal').classList.remove('hidden');
-          }
+          document.getElementById('lobbyModal').classList.remove('hidden');
         }
       };
       const submitShort = () => {
@@ -5130,6 +5589,24 @@
           const pR = getEntityRadius(target);
           const tZoom = Math.max(0.45, Math.min(1.0, 1.05 - pR * 0.0045));
           gameState.camera.zoom += (tZoom - gameState.camera.zoom) * Math.min(1, dt * 4);
+        }
+
+        for (let i = gameState.gravityWaves.length - 1; i >= 0; i--) {
+          const gw = gameState.gravityWaves[i];
+          gw.duration -= dt;
+          if (gw.duration <= 0) { gameState.gravityWaves.splice(i, 1); continue; }
+          const ownerRp = gameState.remotePlayers.get(gw.ownerId);
+          if (ownerRp && ownerRp.alive) { gw.x = ownerRp.x; gw.y = ownerRp.y; }
+        }
+        for (let i = gameState.supernovaProjectiles.length - 1; i >= 0; i--) {
+          const pr = gameState.supernovaProjectiles[i];
+          pr.x += pr.vx * dt; pr.y += pr.vy * dt; pr.life -= dt;
+          if (pr.life <= 0) gameState.supernovaProjectiles.splice(i, 1);
+        }
+        for (let i = gameState.antimatterProjectiles.length - 1; i >= 0; i--) {
+          const pr = gameState.antimatterProjectiles[i];
+          pr.x += pr.vx * dt; pr.y += pr.vy * dt; pr.life -= dt;
+          if (pr.life <= 0) gameState.antimatterProjectiles.splice(i, 1);
         }
 
         const timerEl = document.getElementById('spectateTimerText');
